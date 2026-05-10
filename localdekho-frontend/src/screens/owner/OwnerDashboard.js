@@ -41,6 +41,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { AuthContext } from '../../context/AuthContext';
 import axios from 'axios';
+import { useIsFocused } from '@react-navigation/native';
 import { theme } from '../../theme';
 import GlassCard from '../../components/GlassCard';
 import AnimatedNumber from '../../components/AnimatedNumber';
@@ -77,21 +78,21 @@ const liveDotStyles = StyleSheet.create({
 });
 
 // ─── Top header bar (3 slots) ────────────────────────────────────────────────
-function TopBar({ shopName, shop, navigation, logout }) {
+function TopBar({ shopName, shop, navigation, logout, unreadCount }) {
   return (
     <Animated.View entering={FadeInDown.delay(0).springify()} style={topBarStyles.bar}>
       {/* Left — notifications */}
       <TouchableOpacity
         style={topBarStyles.iconBtn}
-        onPress={() => {
-          if (Platform.OS !== 'web') impactAsync(ImpactFeedbackStyle.Light);
-        }}
+        onPress={() => navigation.navigate('InquiriesList')}
       >
         <Bell size={20} color={theme.colors.textSecondary} />
         {/* unread badge */}
-        <View style={topBarStyles.badge}>
-          <Text style={topBarStyles.badgeText}>3</Text>
-        </View>
+        {unreadCount > 0 && (
+          <View style={topBarStyles.badge}>
+            <Text style={topBarStyles.badgeText}>{unreadCount}</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* Center — shop name */}
@@ -359,17 +360,46 @@ export default function OwnerDashboard({ navigation }) {
   const { logout, user } = useContext(AuthContext);
   const [shop, setShop] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ products: 0, inquiries: 0, unreadInquiries: 0 });
+  const [recentInquiries, setRecentInquiries] = useState([]);
 
-  useEffect(() => { fetchShopDetails(); }, []);
+  const isFocused = useIsFocused();
+
+  useEffect(() => { 
+    if (isFocused) {
+      fetchShopDetails(); 
+    }
+  }, [isFocused]);
 
   const fetchShopDetails = async () => {
     try {
-      const res = await axios.get(
+      const shopRes = await axios.get(
         `${process.env.EXPO_PUBLIC_API_URL}/api/shops/owner/${user.uid}`
       );
-      setShop(res.data);
+      const shopData = shopRes.data;
+      setShop(shopData);
+
+      // Fetch Product Count
+      const prodRes = await axios.get(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/products/shop/${shopData.id}`
+      );
+      
+      // Fetch Inquiries
+      const inqRes = await axios.get(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/inquiries/shop/${shopData.id}`
+      );
+
+      setStats({
+        products: prodRes.data.length || 0,
+        inquiries: inqRes.data.inquiries?.length || 0,
+        unreadInquiries: inqRes.data.unreadCount || 0
+      });
+
+      setRecentInquiries(inqRes.data.inquiries?.slice(0, 3) || []);
+
     } catch (e) {
       if (e.response?.status === 404) navigation.replace('ShopRegistration');
+      console.error('Dashboard Fetch Error:', e);
     } finally {
       setLoading(false);
     }
@@ -406,6 +436,7 @@ export default function OwnerDashboard({ navigation }) {
         shop={shop}
         navigation={navigation}
         logout={logout}
+        unreadCount={stats.unreadInquiries}
       />
 
       <ScrollView
@@ -423,10 +454,10 @@ export default function OwnerDashboard({ navigation }) {
         </Animated.View>
 
         <View style={s.grid}>
-          <StatCard title="VIEWS" value={1240} icon={Eye} color="#1D9E75" delay={200} />
-          <StatCard title="CUSTOMERS" value={850} icon={Users} color="#FFD700" delay={250} />
-          <StatCard title="INQUIRIES" value={42} icon={MessageSquare} color="#00C9FF" delay={300} />
-          <StatCard title="GROWTH" value={12} icon={TrendingUp} color="#00E676" suffix="%" delay={350} />
+          <StatCard title="TOTAL PRODUCTS" value={stats.products} icon={ShoppingBag} color="#1D9E75" delay={200} />
+          <StatCard title="SHOP VIEWS" value={1240} icon={Eye} color="#FFD700" delay={250} />
+          <StatCard title="INQUIRIES" value={stats.inquiries} icon={MessageSquare} color="#00C9FF" delay={300} />
+          <StatCard title="UNREAD" value={stats.unreadInquiries} icon={Bell} color="#FF6B6B" delay={350} />
         </View>
 
         {/* ── Quick actions ── */}
@@ -471,23 +502,25 @@ export default function OwnerDashboard({ navigation }) {
 
         <Animated.View entering={FadeInUp.delay(550).springify()}>
           <GlassCard style={s.inqCard}>
-            <InquiryRow
-              name="Priya Rawat"
-              message="Kya yeh saree size 42 mein milegi?"
-              time="10m"
-              unread
-            />
-            <InquiryRow
-              name="Neha Sharma"
-              message="Price thodi kam ho sakti hai bulk mein?"
-              time="1h"
-              unread
-            />
-            <InquiryRow
-              name="Asha Mehta"
-              message="Aaj shop khuli hai kya?"
-              time="3h"
-            />
+            {recentInquiries.length > 0 ? (
+              recentInquiries.map((inq, i) => (
+                <TouchableOpacity 
+                  key={inq.id} 
+                  onPress={() => navigation.navigate('InquiriesList')}
+                >
+                  <InquiryRow
+                    name={inq.customerPhone || 'Customer'}
+                    message={inq.message}
+                    time={new Date(inq.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    unread={!inq.isRead}
+                  />
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 12 }}>No recent inquiries</Text>
+              </View>
+            )}
           </GlassCard>
         </Animated.View>
 
