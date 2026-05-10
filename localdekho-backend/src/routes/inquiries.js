@@ -48,7 +48,6 @@ router.get('/shop/:shopId', auth, roleCheck(['owner', 'admin']), async (req, res
 
     const inquiriesSnapshot = await db.collection('inquiries')
       .where('shopId', '==', shopId)
-      .orderBy('createdAt', 'desc')
       .get();
       
     const inquiries = [];
@@ -59,6 +58,9 @@ router.get('/shop/:shopId', auth, roleCheck(['owner', 'admin']), async (req, res
       inquiries.push({ id: doc.id, ...inquiry });
       if (!inquiry.isRead) unreadCount++;
     });
+
+    // Sort in memory to avoid needing a composite index
+    inquiries.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json({ inquiries, unreadCount });
   } catch (error) {
