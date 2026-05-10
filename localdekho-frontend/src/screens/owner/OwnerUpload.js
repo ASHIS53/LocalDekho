@@ -25,7 +25,7 @@ import axios from 'axios';
 // ─────────────────────────────────────────
 // DASHED ANIMATED BORDER
 // ─────────────────────────────────────────
-function DashedUploadZone({ onCamera, onGallery, images, disabled }) {
+function DashedUploadZone({ onCamera, onGallery, images, disabled, onRemove, onSetMain }) {
   const opacity = useSharedValue(0.25);
   useEffect(() => {
     opacity.value = withRepeat(withTiming(0.6, { duration: 1400 }), -1, true);
@@ -42,6 +42,25 @@ function DashedUploadZone({ onCamera, onGallery, images, disabled }) {
               {i === 0 && (
                 <View style={dz.mainBadge}>
                   <Text style={dz.mainBadgeText}>MAIN</Text>
+                </View>
+              )}
+              
+              {!disabled && (
+                <View style={dz.actions}>
+                  <TouchableOpacity 
+                    style={dz.removeBtn} 
+                    onPress={() => onRemove(i)}
+                  >
+                    <X size={12} color="#fff" />
+                  </TouchableOpacity>
+                  {i !== 0 && (
+                    <TouchableOpacity 
+                      style={dz.setMainBtn} 
+                      onPress={() => onSetMain(i)}
+                    >
+                      <Text style={dz.setMainText}>Set Main</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             </View>
@@ -122,6 +141,24 @@ const dz = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11, textAlign: 'center', marginTop: 6,
   },
+  actions: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    gap: 5,
+    alignItems: 'flex-end',
+  },
+  removeBtn: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(255,82,82,0.85)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  setMainBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 6,
+  },
+  setMainText: { color: '#fff', fontSize: 8, fontWeight: '800' },
 });
 
 // ─────────────────────────────────────────
@@ -434,6 +471,19 @@ export default function OwnerUpload({ navigation, route }) {
     }
   };
 
+  const removeImage = (index) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const setMainImage = (index) => {
+    setImages(prev => {
+      const newImages = [...prev];
+      const [main] = newImages.splice(index, 1);
+      newImages.unshift(main);
+      return newImages;
+    });
+  };
+
   // Publish
   const handlePublish = async () => {
     if (!name.trim() || !price.trim()) {
@@ -513,6 +563,8 @@ export default function OwnerUpload({ navigation, route }) {
             onGallery={pickImages}
             onCamera={openCamera}
             disabled={isViewOnly}
+            onRemove={removeImage}
+            onSetMain={setMainImage}
           />
 
           {/* Camera + Gallery row */}
