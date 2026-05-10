@@ -11,7 +11,7 @@ import {
   ChevronDown, Plus,
 } from 'lucide-react-native';
 import Animated, {
-  FadeInUp, FadeInDown,
+  FadeInUp, FadeInDown, Layout,
   useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, withSpring,
 } from 'react-native-reanimated';
@@ -37,33 +37,37 @@ function DashedUploadZone({ onCamera, onGallery, images, disabled, onRemove, onS
       <View style={dz.previewWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {images.map((uri, i) => (
-            <View key={i} style={dz.previewCard}>
-              <Image source={{ uri }} style={dz.previewImg} />
-              {i === 0 && (
-                <View style={dz.mainBadge}>
-                  <Text style={dz.mainBadgeText}>MAIN</Text>
-                </View>
-              )}
-              
-              {!disabled && (
-                <View style={dz.actions}>
-                  <TouchableOpacity 
-                    style={dz.removeBtn} 
-                    onPress={() => onRemove(i)}
-                  >
-                    <X size={12} color="#fff" />
-                  </TouchableOpacity>
-                  {i !== 0 && (
+            <Animated.View 
+              key={uri} // Use URI as key for better layout transitions
+              layout={Layout.springify().damping(15)}
+              entering={FadeInDown.delay(i * 100)}
+              style={dz.previewCard}
+            >
+              <TouchableOpacity 
+                activeOpacity={0.9} 
+                onPress={() => i !== 0 && onSetMain(i)}
+                disabled={disabled}
+                style={{ flex: 1 }}
+              >
+                <Image source={{ uri }} style={dz.previewImg} />
+                {i === 0 && (
+                  <View style={dz.mainBadge}>
+                    <Text style={dz.mainBadgeText}>MAIN</Text>
+                  </View>
+                )}
+                
+                {!disabled && (
+                  <View style={dz.actions}>
                     <TouchableOpacity 
-                      style={dz.setMainBtn} 
-                      onPress={() => onSetMain(i)}
+                      style={dz.removeBtn} 
+                      onPress={() => onRemove(i)}
                     >
-                      <Text style={dz.setMainText}>Set Main</Text>
+                      <X size={12} color="#fff" />
                     </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
           ))}
           {images.length < 5 && !disabled && (
             <TouchableOpacity style={dz.addMore} onPress={onGallery}>
@@ -153,12 +157,6 @@ const dz = StyleSheet.create({
     backgroundColor: 'rgba(255,82,82,0.85)',
     justifyContent: 'center', alignItems: 'center',
   },
-  setMainBtn: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: 6,
-  },
-  setMainText: { color: '#fff', fontSize: 8, fontWeight: '800' },
 });
 
 // ─────────────────────────────────────────
