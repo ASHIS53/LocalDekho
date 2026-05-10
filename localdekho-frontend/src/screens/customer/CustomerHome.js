@@ -30,6 +30,8 @@ import {
   AlertTriangle
 } from 'lucide-react-native';
 import * as Location from 'expo-location';
+import MapView, { Marker, Callout } from '../../components/MapComponent';
+import { Map as MapIcon, List } from 'lucide-react-native';
 import Animated, { 
   FadeInDown,
   useSharedValue,
@@ -51,6 +53,7 @@ export default function CustomerHome({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [activeCat, setActiveCat] = useState('All');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
 
   const searchScale = useSharedValue(1);
   const [locationMsg, setLocationMsg] = useState('');
@@ -172,8 +175,26 @@ export default function CustomerHome({ navigation }) {
       </Animated.View>
 
       <View style={styles.sectionHeader}>
-        <Sparkles size={16} color={theme.colors.primaryLight} />
-        <Text style={styles.sectionTitle}>CURATED SECTORS</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Sparkles size={16} color={theme.colors.primaryLight} />
+          <Text style={styles.sectionTitle}>CURATED SECTORS</Text>
+        </View>
+        
+        {/* View Mode Toggle */}
+        <View style={styles.toggleRow}>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]} 
+            onPress={() => setViewMode('list')}
+          >
+            <List size={14} color={viewMode === 'list' ? '#fff' : theme.colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, viewMode === 'map' && styles.toggleBtnActive]} 
+            onPress={() => setViewMode('map')}
+          >
+            <MapIcon size={14} color={viewMode === 'map' ? '#fff' : theme.colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -200,6 +221,36 @@ export default function CustomerHome({ navigation }) {
           <TouchableOpacity style={styles.retryBtn} onPress={() => { setLoading(true); setLocationMsg(''); fetchShops(); }}>
             <Text style={styles.retryBtnText}>RETRY LOCATION</Text>
           </TouchableOpacity>
+        </View>
+      ) : (
+      ) : viewMode === 'map' ? (
+        <View style={styles.mapWrapper}>
+          <MapView
+            style={styles.mainMap}
+            initialRegion={{
+              latitude: userLocation?.latitude || 28.6139,
+              longitude: userLocation?.longitude || 77.2090,
+              latitudeDelta: 0.0922,
+              longitudeDelta: 0.0421,
+            }}
+          >
+            {userLocation && (
+              <Marker 
+                coordinate={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
+                title="Your Location"
+                pinColor={theme.colors.primary}
+              />
+            )}
+            {filteredShops.map((shop) => (
+              <Marker
+                key={shop.id}
+                coordinate={{ latitude: parseFloat(shop.lat), longitude: parseFloat(shop.lng) }}
+                title={shop.name}
+                description={shop.category}
+                onCalloutPress={() => navigation.navigate('ShopDetail', { shopId: shop.id, shop })}
+              />
+            ))}
+          </MapView>
         </View>
       ) : (
         <FlashList
@@ -274,5 +325,11 @@ const styles = StyleSheet.create({
   retryBtn: { backgroundColor: 'rgba(255,82,82,0.1)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,82,82,0.2)' },
   retryBtnText: { color: theme.colors.error, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   emptyWrapper: { alignItems: 'center', marginTop: 50, opacity: 0.5 },
-  emptyText: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: '700', marginTop: 15 }
+  emptyText: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: '700', marginTop: 15 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  toggleRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 4 },
+  toggleBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  toggleBtnActive: { backgroundColor: theme.colors.primary },
+  mapWrapper: { flex: 1, marginTop: 10, borderRadius: 24, overflow: 'hidden', marginHorizontal: 20, marginBottom: 120, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  mainMap: { flex: 1 },
 });
