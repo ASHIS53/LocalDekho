@@ -80,7 +80,7 @@ const liveDotStyles = StyleSheet.create({
 // ─── Top header bar (3 slots) ────────────────────────────────────────────────
 function TopBar({ shopName, shop, navigation, logout, unreadCount }) {
   return (
-    <Animated.View entering={FadeInDown.delay(0).springify()} style={topBarStyles.bar}>
+    <View style={topBarStyles.bar}>
       {/* Left — notifications */}
       <TouchableOpacity
         style={topBarStyles.iconBtn}
@@ -118,7 +118,7 @@ function TopBar({ shopName, shop, navigation, logout, unreadCount }) {
           <UserCircle size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 const topBarStyles = StyleSheet.create({
@@ -131,6 +131,7 @@ const topBarStyles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
+    zIndex: 10,
   },
   center: {
     flex: 1,
@@ -428,7 +429,11 @@ export default function OwnerDashboard({ navigation }) {
   return (
     <View style={s.root}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={['#0D0D14', '#0A0A0F']} style={StyleSheet.absoluteFill} />
+      <LinearGradient 
+        colors={['#0D0D14', '#0A0A0F']} 
+        style={[StyleSheet.absoluteFill, { zIndex: -1 }]} 
+        pointerEvents="none"
+      />
 
       {/* ── Top bar ── */}
       <TopBar
@@ -442,6 +447,7 @@ export default function OwnerDashboard({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[s.scroll, { paddingHorizontal: hPad }]}
+        style={{ zIndex: 1 }}
       >
         {/* ── Status toggle ── */}
         <View style={{ marginHorizontal: -hPad }}>
